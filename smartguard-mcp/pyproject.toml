@@ -1,0 +1,34 @@
+[project]
+name = "smartguard-mcp"
+version = "0.1.0"
+description = "SmartGuard MCP Server — FastMCP service exposing video ingestion + multimodal search tools (Pixeltable + Gemini ASR/VLM/embeddings + CLIP)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.0",
+    "click>=8.2.1",
+    "fastmcp>=2.5.2",
+    "loguru>=0.7.3",
+    "openai>=1.91.0",
+    "opik>=1.7.36",
+    "pixeltable>=0.4.1",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.0",
+    "python-dotenv>=1.1.0",
+    "ruff>=0.12.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/smartguard_mcp"]
+
+[tool.uv]
+# Force prebuilt av wheel (av 14.x has no manylinux wheel for this platform;
+# 18.x ships a prebuilt wheel and is API-compatible for Pixeltable's usage).
+override-dependencies = ["av>=18.0.0"]
+
+[tool.ruff]
+target-version = "py312"

@@ -1,0 +1,67 @@
+services:
+  smartguard-mcp:
+    container_name: smartguard-mcp
+    build:
+      context: ./smartguard-mcp
+    ports:
+      - "9090:9090"
+    env_file:
+      - ./smartguard-mcp/.env
+    networks:
+      - agent-network
+    environment:
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - ./.vscode:/app/.vscode
+      - shared_media:/app/shared_media
+      - ~/.cache:/root/.cache
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '4' 
+          memory: 4G   
+        reservations:
+          cpus: '4'    
+          memory: 4G   
+
+  smartguard-api:
+    container_name: smartguard-api
+    build:
+      context: ./smartguard-api
+    ports:
+      - "8080:8080"
+    environment:
+      - DISABLE_NEST_ASYNCIO=True
+    env_file:
+      - ./smartguard-api/.env
+    networks:
+      - agent-network
+    depends_on:
+      - smartguard-mcp
+    volumes:
+      - shared_media:/app/shared_media
+      - ./.vscode:/app/.vscode
+  smartguard-ui:
+    container_name: smartguard-ui
+    build:
+      context: ./smartguard-ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - smartguard-api
+      - smartguard-mcp
+    networks:
+      - agent-network
+    volumes:
+      - shared_media:/app/shared_media
+
+networks:
+  agent-network:
+    name: agent-network
+
+volumes:
+  shared_media:
+    name: shared_media
