@@ -4,16 +4,14 @@ from typing import TYPE_CHECKING, Optional
 
 import pixeltable as pxt
 from loguru import logger
-from pixeltable.functions import openai
 from pixeltable.functions.huggingface import clip, sentence_transformer
-from pixeltable.functions.openai import vision
 from pixeltable.functions.video import extract_audio
 from pixeltable.iterators import AudioSplitter
 from pixeltable.iterators.video import FrameIterator
 
 import smartguard_mcp.video.ingestion.registry as registry
 from smartguard_mcp.config import get_settings
-from smartguard_mcp.video.ingestion.functions import extract_text_from_chunk, gemini_transcribe, resize_image
+from smartguard_mcp.video.ingestion.functions import extract_text_from_chunk, gemini_transcribe, resize_image, zai_caption
 from smartguard_mcp.video.ingestion.tools import re_encode_video
 
 if TYPE_CHECKING:
@@ -172,10 +170,9 @@ class VideoProcessor:
 
     def _add_frame_captioning(self):
         self.frames_view.add_computed_column(
-            im_caption=vision(
-                prompt=settings.CAPTION_MODEL_PROMPT,
+            im_caption=zai_caption(
                 image=self.frames_view.resized_frame,
-                model=settings.IMAGE_CAPTION_MODEL,
+                prompt=settings.CAPTION_MODEL_PROMPT,
             )
         )
 

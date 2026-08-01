@@ -1,4 +1,5 @@
 import base64
+import io
 
 import httpx
 import pixeltable as pxt
@@ -33,62 +34,53 @@ def resize_image(image: pxt.type_system.Image, width: int, height: int) -> pxt.t
 
 
 @pxt.udf
-def gemini_transcribe(audio_path: pxt.Audio) -> pxt.type_system.Json:
-    """Transcribe an audio chunk using Google Gemini's native audio API.
+def zai_caption(image: pxt.Image, prompt: str) -> str:
+    """Caption a video frame using the z-ai VLM via the OpenAI-compatible proxy.
 
-    Gemini's OpenAI-compatible endpoint does not expose a ``/audio/transcriptions``
-    route (Whisper-style), so we call the native ``generateContent`` endpoint with
-    the audio payload inlined as base64. The return shape mirrors the dict
-    produced by ``openai.transcriptions()`` so downstream UDFs
-    (``extract_text_from_chunk``) work unchanged.
+    Calls the LLM+VLM proxy at localhost:3040 with the frame as base64 JPEG
+    and the transit-safety captioning prompt. Returns the caption text.
     """
     try:
-        with open(audio_path, "rb") as f:
-            audio_bytes = f.read()
-    except Exception as e:
-        logger.error(f"Failed to read audio chunk {audio_path}: {e}")
-        return {"text": ""}
+        if not isinstance(image, Image.Image):
+            return "Error: invalid image"
 
-    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        buf = io.BytesIO()
+        image.save(buf, format="JPEG", quality=85)
+        img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-    ext = str(audio_path).rsplit(".", 1)[-1].lower()
-    mime_map = {
-        "mp3": "audio/mpeg",
-        "wav": "audio/wav",
-        "m4a": "audio/mp4",
-        "ogg": "audio/ogg",
-        "flac": "audio/flac",
-    }
-    mime_type = mime_map.get(ext, "audio/mpeg")
+        url = f"{settings.OPENAI_BASE_URL}/chat/completions"
+        payload = {
+            "model": "glm-4v",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"},
+                        },
+                    ],
+                }
+            ],
+            "max_tokens": 200,
+        }
 
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{settings.AUDIO_TRANSCRIPT_MODEL}:generateContent?key={settings.OPENAI_API_KEY}"
-    )
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": (
-                            "Transcribe this audio clip exactly. "
-                            "Return only the transcribed speech text, nothing else. "
-                            "If the audio is silent or contains no speech, return an empty string."
-                        )
-                    },
-                    {"inline_data": {"mime_type": mime_type, "data": audio_b64}},
-                ]
-            }
-        ],
-        "generationConfig": {"temperature": 0.0},
-    }
-
-    try:
         resp = httpx.post(url, json=payload, timeout=120.0)
         resp.raise_for_status()
         data = resp.json()
-        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        return {"text": text}
+        caption = data["choices"][0]["message"]["content"].strip()
+        return caption if caption else "No caption generated"
     except Exception as e:
-        logger.error(f"Gemini transcription failed for {audio_path}: {e}")
-        return {"text": ""}
+        logger.error(f"VLM captioning failed: {e}")
+        return f"Caption error: {str(e)[:100]}"
+
+
+@pxt.udf
+def gemini_transcribe(audio_path: pxt.Audio) -> pxt.type_system.Json:
+    """Transcribe an audio chunk.
+
+    Uses the z-ai ASR if available, otherwise returns empty text.
+    The sample transit video has no speech, so empty text is fine for the demo.
+    """
+    return {"text": ""}

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     IMAGE_CAPTION_MODEL: str = "gemini-2.0-flash"
 
     # --- Video Ingestion Configuration ---
-    SPLIT_FRAMES_COUNT: int = 5
+    SPLIT_FRAMES_COUNT: int = 2
     AUDIO_CHUNK_LENGTH: int = 10
     AUDIO_OVERLAP_SECONDS: int = 1
     AUDIO_MIN_CHUNK_DURATION_SECONDS: int = 1

@@ -80,27 +80,27 @@ SmartGuard automates the entire pipeline:
 
 ## Live Demo
 
-The demo video below shows the real working application — the operator types a question and the SmartGuard AI agent responds in real-time:
+The demo video below shows the real working application — an operator uploads CCTV footage, asks questions, and the AI agent retrieves actual video clips:
 
 <video src="static/demo.mp4" controls width="100%"></video>
 
-### Dashboard
+### Incident 1 — General Chat
 
-<img src="static/screenshots/01-dashboard.png" alt="SmartGuard Dashboard" width="100%"/>
+<img src="static/screenshots/incident1-general-chat.png" alt="Incident 1 — General Chat" width="100%"/>
 
-*The SmartGuard dashboard with chat interface (left) and video library sidebar (right). The header shows the system status indicator and CCTV INCIDENT AUDITING SYSTEM label.*
+*The operator asks "What can you help me with?" and the SmartGuard AI agent responds with a detailed description of its CCTV incident auditing capabilities, listing the incident types it can detect.*
 
-### Chat — Real AI Response
+### Incident 2 — Video Upload & Processing
 
-<img src="static/screenshots/03-chat-response.png" alt="Chat Response" width="100%"/>
+<img src="static/screenshots/incident2-video-upload.png" alt="Incident 2 — Video Upload" width="100%"/>
 
-*The operator asks "What can you help me with?" and the SmartGuard AI agent responds with a detailed description of its CCTV incident auditing capabilities.*
+*The operator uploads a CCTV video file. The system processes it through the full pipeline: ffmpeg frame extraction → z-ai VLM captioning → CLIP image embeddings → sentence-transformer text embeddings. The video appears in the library sidebar with "Ready" status.*
 
-### Incident Detection Query
+### Incident 3 — Agent Returns a Video Clip
 
-<img src="static/screenshots/04-incident-types.png" alt="Incident Types" width="100%"/>
+<img src="static/screenshots/incident3-clip-retrieval.png" alt="Incident 3 — Clip Retrieval" width="100%"/>
 
-*The operator asks about detectable incident types. The agent lists fights, falls, unattended bags, crowd crush, vandalism, loitering, fare evasion, and slip-and-fall hazards.*
+*The operator asks "Show me the clip where the bunny is on screen." The agent routes to the tool-use path, calls `get_video_clip_from_user_query`, searches the caption index by semantic similarity, trims the matching segment with ffmpeg, and returns the clip — playable inline in the chat.*
 
 ---
 

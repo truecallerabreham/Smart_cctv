@@ -129,6 +129,26 @@ class LLMAgent(BaseAgent):
             is_image_provided=bool(image_base64),
         )
         chat_history = self._build_chat_history(tool_use_system_prompt, message)
+        # Inject a system note telling the LLM which video file is currently
+        # active. Without this, the LLM has no way to know a video has been
+        # provided (video_path is only used to fill the tool-call args later),
+        # and it tends to answer with "please provide a video file" instead
+        # of emitting a tool_call.
+        if video_path:
+            chat_history.append(
+                {
+                    "role": "system",
+                    "content": (
+                        f"The operator has already provided CCTV footage at "
+                        f"path '{video_path}'. You do NOT need to ask them for "
+                        f"a video file. Use one of the available tools "
+                        f"('get_video_clip_from_user_query' for natural-"
+                        f"language retrieval, 'ask_question_about_video' for "
+                        f"questions about the footage) and the system will "
+                        f"fill in the video_path argument automatically."
+                    ),
+                }
+            )
 
         response = (
             self.client.chat.completions.create(
