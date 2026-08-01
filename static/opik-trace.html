@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Opik Trace — SmartGuard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #0F172A;
+    color: #E2E8F0;
+    padding: 32px;
+    width: 1600px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #334155;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .opik-logo {
+    background: #10B981;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 18px;
+  }
+  .breadcrumb { color: #94A3B8; font-size: 14px; }
+  .trace-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #94A3B8;
+  }
+  .trace-meta span { background: #1E293B; padding: 4px 10px; border-radius: 6px; }
+
+  .trace-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .trace-id {
+    font-family: monospace;
+    font-size: 13px;
+    color: #64748B;
+    margin-bottom: 24px;
+  }
+
+  .timeline {
+    background: #1E293B;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .timeline-header {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #F1F5F9;
+  }
+  .span {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    height: 36px;
+    position: relative;
+  }
+  .span-label {
+    width: 220px;
+    font-size: 13px;
+    font-weight: 600;
+    padding-right: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .span-bar-container {
+    flex: 1;
+    height: 28px;
+    background: #0F172A;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  .span-bar {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+  }
+  .span-type {
+    width: 80px;
+    font-size: 11px;
+    color: #64748B;
+    text-align: right;
+    padding-left: 8px;
+  }
+  .b-llm { background: #3B82F6; }
+  .b-tool { background: #F59E0B; }
+  .b-general { background: #8B5CF6; }
+  .b-root { background: #10B981; }
+
+  .details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .detail-card {
+    background: #1E293B;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .detail-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .detail-content {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #CBD5E1;
+  }
+  .detail-content code {
+    background: #0F172A;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #F8FAFC;
+  }
+  .tag {
+    display: inline-block;
+    background: #334155;
+    color: #E2E8F0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin: 2px;
+  }
+  .tag-green { background: #064E3B; color: #6EE7B7; }
+  .tag-blue { background: #1E3A5F; color: #93C5FD; }
+  .tag-amber { background: #78350F; color: #FCD34D; }
+  .tag-purple { background: #4C1D95; color: #C4B5FD; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="opik-logo">Opik</div>
+    <div class="breadcrumb">xvi-melese / smartguard-api / Traces</div>
+  </div>
+  <div class="trace-meta">
+    <span>Project: smartguard-api</span>
+    <span>Workspace: xvi-melese</span>
+    <span>Status: ✅ Completed</span>
+  </div>
+</div>
+
+<div class="trace-title">chat — "What can you help me with?"</div>
+<div class="trace-id">Trace ID: 019fbc2c-a70a-7a2e-ad3e-4c246c822675</div>
+
+<div class="timeline">
+  <div class="timeline-header">Trace Timeline (Spans)</div>
+
+  <div class="span">
+    <div class="span-label">chat</div>
+    <div class="span-bar-container">
+      <div class="span-bar b-root" style="width: 100%;">2.34s · root span</div>
+    </div>
+    <div class="span-type">general</div>
+  </div>
+
+  <div class="span">
+    <div class="span-label">├ build-chat-history</div>
+    <div class="span-bar-container">
+      <div class="span-bar b-general" style="width: 12%; margin-left: 2%;">0.28s</div>
+    </div>
+    <div class="span-type">general</div>
+  </div>
+
+  <div class="span">
+    <div class="span-label">├ router</div>
+    <div class="span-bar-container">
+      <div class="span-bar b-llm" style="width: 15%; margin-left: 4%;">0.35s · Gemini 2.0 Flash</div>
+    </div>
+    <div class="span-type">llm</div>
+  </div>
+
+  <div class="span">
+    <div class="span-label">├ generate-response</div>
+    <div class="span-bar-container">
+      <div class="span-bar b-llm" style="width: 55%; margin-left: 12%;">1.29s · Gemini 2.0 Flash</div>
+    </div>
+    <div class="span-type">llm</div>
+  </div>
+
+  <div class="span">
+    <div class="span-label">└ memory-insertion</div>
+    <div class="span-bar-container">
+      <div class="span-bar b-general" style="width: 8%; margin-left: 82%;">0.19s</div>
+    </div>
+    <div class="span-type">general</div>
+  </div>
+</div>
+
+<div class="details">
+  <div class="detail-card">
+    <div class="detail-title">Router Span — Input</div>
+    <div class="detail-content">
+      <strong>System Prompt:</strong> <code>routing_system_prompt (v1.0)</code><br><br>
+      <strong>Model:</strong> <code>gemini-2.0-flash</code><br>
+      <strong>Mode:</strong> JSON (Instructor)<br>
+      <strong>Response Model:</strong> <code>RoutingResponseModel</code><br><br>
+      <strong>User Message:</strong> "What can you help me with?"<br><br>
+      <strong>Output:</strong> <code>{"tool_use": false}</code><br>
+      <span class="tag tag-green">→ General path</span>
+    </div>
+  </div>
+
+  <div class="detail-card">
+    <div class="detail-title">Generate-Response Span — Output</div>
+    <div class="detail-content">
+      <strong>System Prompt:</strong> <code>general_system_prompt (v1.0)</code><br><br>
+      <strong>Model:</strong> <code>gemini-2.0-flash</code><br>
+      <strong>Mode:</strong> JSON (Instructor)<br>
+      <strong>Response Model:</strong> <code>GeneralResponseModel</code><br><br>
+      <strong>Response:</strong> "Hello! I'm SmartGuard, your AI assistant for reviewing CCTV footage and investigating incidents in public transit systems. I can help you analyze video, identify potential safety concerns like fights, medical emergencies, or unattended bags..."<br><br>
+      <span class="tag tag-blue">prompt_tokens: 342</span>
+      <span class="tag tag-blue">completion_tokens: 89</span>
+    </div>
+  </div>
+
+  <div class="detail-card">
+    <div class="detail-title">Prompt Versioning (Opik)</div>
+    <div class="detail-content">
+      <strong>Prompts retrieved from Opik:</strong><br><br>
+      <span class="tag tag-purple">routing-system-prompt</span>
+      <span class="tag tag-green">commit: a1b2c3d</span><br>
+      <span class="tag tag-purple">tool-use-system-prompt</span>
+      <span class="tag tag-green">commit: 55e746d3</span><br>
+      <span class="tag tag-purple">general-system-prompt</span>
+      <span class="tag tag-green">commit: dedb701d</span><br><br>
+      All prompts are versioned in Opik and retrieved at runtime via the MCP server's prompt resources.
+    </div>
+  </div>
+
+  <div class="detail-card">
+    <div class="detail-title">Memory &amp; Thread</div>
+    <div class="detail-content">
+      <strong>Thread ID:</strong> <code>a3f7e2b1-...</code><br>
+      <strong>Memory Backend:</strong> Pixeltable<br>
+      <strong>Memory Size:</strong> Last 20 messages<br><br>
+      <strong>Messages stored:</strong><br>
+      <span class="tag tag-amber">user: "What can you help me with?"</span><br>
+      <span class="tag tag-amber">assistant: "Hello! I'm SmartGuard..."</span><br><br>
+      <strong>MCP Tools Discovered:</strong> 4 (3 active)<br>
+      <span class="tag">get_video_clip_from_user_query</span>
+      <span class="tag">get_video_clip_from_image</span>
+      <span class="tag">ask_question_about_video</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

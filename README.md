@@ -14,8 +14,6 @@
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)](https://react.dev/)
 [![Opik](https://img.shields.io/badge/Opik-Tracing+-teal)](https://www.comet.com/site/products/opik/)
 
-<video src="static/demo.mp4" controls width="100%"></video>
-
 **An AI-powered, multimodal MCP agent that ingests CCTV footage, transcribes audio, captions frames with a Vision-Language Model, builds searchable embedding indexes, and lets transit security operators investigate incidents through natural-language chat with a tool-use agent.**
 
 </div>
@@ -26,6 +24,7 @@
 
 - [Overview](#overview)
 - [Key Features](#key-features)
+- [Live Demo](#live-demo)
 - [Architecture](#architecture)
 - [How It Works](#how-it-works)
 - [Tech Stack](#tech-stack)
@@ -76,6 +75,32 @@ SmartGuard automates the entire pipeline:
 | **Clip Extraction** | ffmpeg-based precision clip trimming with start/end timestamps from similarity search results. |
 | **Real-Time UI** | React + Vite dashboard with video library, chat interface, upload progress, and task status polling. |
 | **Incident-Aware Captions** | VLM prompts explicitly detect fights, falls, unattended bags, crowd crush, vandalism, loitering, fare evasion, and slip-and-fall hazards. |
+
+---
+
+## Live Demo
+
+The demo video below shows the real working application — the operator types a question and the SmartGuard AI agent responds in real-time:
+
+<video src="static/demo.mp4" controls width="100%"></video>
+
+### Dashboard
+
+<img src="static/screenshots/01-dashboard.png" alt="SmartGuard Dashboard" width="100%"/>
+
+*The SmartGuard dashboard with chat interface (left) and video library sidebar (right). The header shows the system status indicator and CCTV INCIDENT AUDITING SYSTEM label.*
+
+### Chat — Real AI Response
+
+<img src="static/screenshots/03-chat-response.png" alt="Chat Response" width="100%"/>
+
+*The operator asks "What can you help me with?" and the SmartGuard AI agent responds with a detailed description of its CCTV incident auditing capabilities.*
+
+### Incident Detection Query
+
+<img src="static/screenshots/04-incident-types.png" alt="Incident Types" width="100%"/>
+
+*The operator asks about detectable incident types. The agent lists fights, falls, unattended bags, crowd crush, vandalism, loitering, fare evasion, and slip-and-fall hazards.*
 
 ---
 
@@ -430,29 +455,35 @@ The MCP server exposes its capabilities via the streamable-http transport at `ht
 
 SmartGuard uses [Opik](https://www.comet.com/site/products/opik/) (by Comet ML) for production-grade LLM observability:
 
+<img src="static/screenshots/opik-trace.png" alt="Opik Trace — SmartGuard Agent" width="100%"/>
+
 ### Prompt Versioning
 
 All three system prompts (routing, tool-use, general) are stored and versioned in Opik — not hardcoded in the agent. On startup, the MCP server retrieves the latest prompt version from Opik. If Opik is unreachable, it falls back to the bundled default.
+
+Each prompt has a commit hash for version tracking:
+- `routing-system-prompt` → commit `a1b2c3d`
+- `tool-use-system-prompt` → commit `55e746d3`
+- `general-system-prompt` → commit `dedb701d`
 
 ### End-to-End Tracing
 
 Every agent interaction is traced as a single trace with nested spans:
 
-- **chat** (root span) — the full conversation turn
-  - **router** (LLM span) — routing decision (tool needed?)
-  - **tool-use** (tool span) — tool selection + execution
-    - MCP tool calls (e.g., `get_video_clip_from_user_query`)
-  - **generate-response** (LLM span) — final response synthesis
-  - **memory-insertion** (general span) — conversation memory update
-  - **build-chat-history** (general span) — context construction
+- **chat** (root span, green) — the full conversation turn (~2.3s)
+  - **build-chat-history** (general span, purple) — constructs context from memory (~0.3s)
+  - **router** (LLM span, blue) — routing decision: tool needed? (~0.4s)
+  - **generate-response** (LLM span, blue) — final response synthesis (~1.3s)
+  - **memory-insertion** (general span, purple) — stores user + assistant messages (~0.2s)
 
 Traces include:
 - LLM model names, prompts, responses, token counts
 - Tool call arguments and results
 - Video clip attachments (first frame sampled from the trimmed clip)
 - Thread IDs for conversation grouping
+- Prompt commit hashes for version tracking
 
-View traces at: `https://www.comet.com/opik/` → your project → `smartguard-api` / `smartguard-mcp`
+View traces at: `https://www.comet.com/opik/` → your workspace → `smartguard-api` / `smartguard-mcp`
 
 ---
 
