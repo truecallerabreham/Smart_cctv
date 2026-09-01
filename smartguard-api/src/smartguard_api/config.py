@@ -6,13 +6,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file="smartguard-api/.env", extra="ignore", env_file_encoding="utf-8")
 
-    # --- LLM Configuration (OpenAI-compatible — defaults to Google Gemini) ---
+    # --- LLM Configuration (OpenAI-compatible — Groq by default) ---
     LLM_API_KEY: str
-    LLM_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
-    LLM_ROUTING_MODEL: str = "gemini-2.0-flash"
-    LLM_TOOL_USE_MODEL: str = "gemini-2.0-flash"
-    LLM_IMAGE_MODEL: str = "gemini-2.0-flash"
-    LLM_GENERAL_MODEL: str = "gemini-2.0-flash"
+    LLM_BASE_URL: str = "https://api.groq.com/openai/v1"
+    LLM_ROUTING_MODEL: str = "qwen/qwen3.8-27b"
+    LLM_TOOL_USE_MODEL: str = "qwen/qwen3.8-27b"
+    LLM_IMAGE_MODEL: str = "qwen/qwen3.8-27b"
+    LLM_GENERAL_MODEL: str = "qwen/qwen3.8-27b"
 
     # --- Comet ML & Opik Configuration ---
     OPIK_API_KEY: str | None = Field(default=None, description="API key for Comet ML and Opik services.")

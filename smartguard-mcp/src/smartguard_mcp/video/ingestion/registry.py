@@ -80,7 +80,7 @@ def add_index_to_registry(
     VIDEO_INDEXES_REGISTRY[video_name] = cached_table_meta
 
     dt = datetime.now()
-    dtstr = dt.strftime("%Y-%m-%d%H:%M:%S")
+    dtstr = dt.strftime("%Y-%m-%d%H%M%S")
     records_dir = Path(cc.DEFAULT_CACHED_TABLES_REGISTRY_DIR)
     records_dir.mkdir(parents=True, exist_ok=True)
     with open(records_dir / f"registry_{dtstr}.json", "w") as f:

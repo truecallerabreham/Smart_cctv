@@ -160,7 +160,7 @@ async def upload_video(file: UploadFile = File(...)):
             with open(video_path, "wb") as f:
                 shutil.copyfileobj(file.file, f)
 
-        return VideoUploadResponse(message="Video uploaded successfully", video_path=str(video_path))
+        return VideoUploadResponse(message="Video uploaded successfully", video_path=str(video_path.resolve()))
     except Exception as e:
         logger.error(f"Error uploading video: {e}")
         raise HTTPException(status_code=500, detail=str(e))

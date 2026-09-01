@@ -49,10 +49,16 @@ def get_video_clip_from_user_query(video_path: str, user_query: str) -> str:
     speech_clips = search_engine.search_by_speech(user_query, settings.VIDEO_CLIP_SPEECH_SEARCH_TOP_K)
     caption_clips = search_engine.search_by_caption(user_query, settings.VIDEO_CLIP_CAPTION_SEARCH_TOP_K)
 
-    speech_sim = speech_clips[0]["similarity"] if speech_clips else 0
-    caption_sim = caption_clips[0]["similarity"] if caption_clips else 0
+    if not speech_clips and not caption_clips:
+        return (
+            f"No matching moments found in the video for the query '{user_query}'. "
+            f"The video may not contain frame captions or audio transcripts that match this request."
+        )
 
-    video_clip_info = speech_clips[0] if speech_sim > caption_sim else caption_clips[0]
+    speech_sim = speech_clips[0]["similarity"] if speech_clips else 0.0
+    caption_sim = caption_clips[0]["similarity"] if caption_clips else 0.0
+
+    video_clip_info = speech_clips[0] if speech_sim >= caption_sim else caption_clips[0]
 
     video_clip = extract_video_clip(
         video_path=video_path,
@@ -61,7 +67,10 @@ def get_video_clip_from_user_query(video_path: str, user_query: str) -> str:
         output_path=f"./shared_media/{str(uuid4())}.mp4",
     )
 
-    return video_clip
+    # Return just the filename so the API can serve it via /media
+    from pathlib import Path as PathLib
+    filename = PathLib(video_clip).name
+    return filename
 
 
 def get_video_clip_from_image(video_path: str, user_image: str) -> str:
@@ -77,6 +86,9 @@ def get_video_clip_from_image(video_path: str, user_image: str) -> str:
     search_engine = VideoSearchEngine(video_path)
     image_clips = search_engine.search_by_image(user_image, settings.VIDEO_CLIP_IMAGE_SEARCH_TOP_K)
 
+    if not image_clips:
+        return "No matching frames found in the video for the provided image."
+
     video_clip = extract_video_clip(
         video_path=video_path,
         start_time=image_clips[0]["start_time"],
@@ -84,7 +96,10 @@ def get_video_clip_from_image(video_path: str, user_image: str) -> str:
         output_path=f"./shared_media/{str(uuid4())}.mp4",
     )
 
-    return video_clip
+    # Return just the filename so the API can serve it via /media
+    from pathlib import Path as PathLib
+    filename = PathLib(video_clip).name
+    return filename
 
 
 def ask_question_about_video(video_path: str, user_query: str) -> str:

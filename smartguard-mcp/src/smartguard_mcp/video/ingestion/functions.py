@@ -1,5 +1,6 @@
 import base64
 import io
+import time
 
 import httpx
 import pixeltable as pxt
@@ -50,7 +51,7 @@ def zai_caption(image: pxt.Image, prompt: str) -> str:
 
         url = f"{settings.OPENAI_BASE_URL}/chat/completions"
         payload = {
-            "model": "glm-4v",
+            "model": settings.IMAGE_CAPTION_MODEL,
             "messages": [
                 {
                     "role": "user",
@@ -66,7 +67,25 @@ def zai_caption(image: pxt.Image, prompt: str) -> str:
             "max_tokens": 200,
         }
 
-        resp = httpx.post(url, json=payload, timeout=120.0)
+        _headers = {
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+            "User-Agent": "OpenAI/Python 1.0 (SmartGuard-MCP)",
+        }
+        resp = httpx.post(
+            url,
+            json=payload,
+            headers=_headers,
+            timeout=120.0,
+        )
+        if resp.status_code == 429:
+            logger.warning(f"VLM captioning rate-limited (HTTP 429); waiting before retry.")
+            time.sleep(60)
+            resp = httpx.post(
+                url,
+                json=payload,
+                headers=_headers,
+                timeout=120.0,
+            )
         resp.raise_for_status()
         data = resp.json()
         caption = data["choices"][0]["message"]["content"].strip()

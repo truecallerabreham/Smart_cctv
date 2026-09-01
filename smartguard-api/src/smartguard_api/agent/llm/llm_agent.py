@@ -1,12 +1,13 @@
 import json
+import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import instructor
 import opik
 from loguru import logger
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from opik import Attachment, opik_context
 
 from smartguard_api import tools
@@ -24,6 +25,29 @@ from smartguard_api.models import (
 logger.bind(name="LLMAgent")
 
 settings = get_settings()
+
+
+def _is_quota_error(e: Exception) -> bool:
+    """Return True if the exception indicates a Gemini free-tier rate-limit (429)."""
+    if isinstance(e, RateLimitError):
+        return True
+    return "429" in str(e) or "quota" in str(e).lower() or "rate-lim" in str(e).lower()
+
+
+def _with_quota_retry(call: Callable, retries: int = 3, base_delay: float = 30.0):
+    """Retry a Gemini completion on free-tier 429 rate limits with backoff."""
+    for attempt in range(retries):
+        try:
+            return call()
+        except Exception as e:
+            if not _is_quota_error(e):
+                raise
+            if attempt == retries - 1:
+                raise
+            delay = base_delay * (attempt + 1)
+            logger.warning(f"Gemini rate-limited (429); retrying in {delay}s (attempt {attempt + 1}/{retries})")
+            time.sleep(delay)
+    raise RuntimeError("Unreachable: quota retry loop exited without returning or raising")
 
 
 class LLMAgent(BaseAgent):
@@ -91,11 +115,13 @@ class LLMAgent(BaseAgent):
             {"role": "system", "content": self.routing_system_prompt},
             {"role": "user", "content": message},
         ]
-        response = self.instructor_client.chat.completions.create(
-            model=settings.LLM_ROUTING_MODEL,
-            response_model=RoutingResponseModel,
-            messages=messages,
-            max_tokens=20,
+        response = _with_quota_retry(
+            lambda: self.instructor_client.chat.completions.create(
+                model=settings.LLM_ROUTING_MODEL,
+                response_model=RoutingResponseModel,
+                messages=messages,
+                max_tokens=100,
+            )
         )
         return response.tool_use
 
@@ -151,12 +177,14 @@ class LLMAgent(BaseAgent):
             )
 
         response = (
-            self.client.chat.completions.create(
-                model=settings.LLM_TOOL_USE_MODEL,
-                messages=chat_history,
-                tools=self.tools,
-                tool_choice="auto",
-                max_tokens=4096,
+            _with_quota_retry(
+                lambda: self.client.chat.completions.create(
+                    model=settings.LLM_TOOL_USE_MODEL,
+                    messages=chat_history,
+                    tools=self.tools,
+                    tool_choice="required",
+                    max_tokens=4096,
+                )
             )
             .choices[0]
             .message
@@ -166,7 +194,15 @@ class LLMAgent(BaseAgent):
 
         if not tool_calls:
             logger.info("No tool calls available, returning general response ...")
-            return GeneralResponseModel(message=response.content or "")
+            return GeneralResponseModel(message=response.content or "I was unable to process your request. Please try again.")
+
+        chat_history.append(
+            {
+                "role": "assistant",
+                "content": response.content,
+                "tool_calls": [call.model_dump() for call in tool_calls],
+            }
+        )
 
         for tool_call in tool_calls:
             function_response = await self._execute_tool_call(tool_call, video_path, image_base64)
@@ -192,11 +228,27 @@ class LLMAgent(BaseAgent):
 
         logger.info(f"Chat history: {chat_history}")
 
-        followup_response = self.instructor_client.chat.completions.create(
-            model=settings.LLM_TOOL_USE_MODEL,
-            messages=chat_history,
-            response_model=response_model,
-        )
+        try:
+            followup_response = _with_quota_retry(
+                lambda: self.instructor_client.chat.completions.create(
+                    model=settings.LLM_TOOL_USE_MODEL,
+                    messages=chat_history,
+                    response_model=response_model,
+                )
+            )
+        except Exception as e:
+            logger.error(f"Structured follow-up failed ({e}); falling back to plain completion.")
+            plain = _with_quota_retry(
+                lambda: self.client.chat.completions.create(
+                    model=settings.LLM_TOOL_USE_MODEL,
+                    messages=chat_history,
+                )
+            )
+            content = (plain.choices[0].message.content or "").strip() or "I was unable to answer that question."
+            if response_model is GeneralResponseModel:
+                followup_response = GeneralResponseModel(message=content)
+            else:
+                followup_response = VideoClipResponseModel(message=content, clip_path=tool_response)
 
         if isinstance(followup_response, VideoClipResponseModel):
             try:
@@ -221,11 +273,24 @@ class LLMAgent(BaseAgent):
     @opik.track(name="generate-response", type="llm")
     def _respond_general(self, message: str) -> str:
         chat_history = self._build_chat_history(self.general_system_prompt, message)
-        return self.instructor_client.chat.completions.create(
-            model=settings.LLM_GENERAL_MODEL,
-            messages=chat_history,
-            response_model=GeneralResponseModel,
-        )
+        try:
+            return _with_quota_retry(
+                lambda: self.instructor_client.chat.completions.create(
+                    model=settings.LLM_GENERAL_MODEL,
+                    messages=chat_history,
+                    response_model=GeneralResponseModel,
+                )
+            )
+        except Exception as e:
+            logger.error(f"Structured general response failed ({e}); falling back to plain completion.")
+            plain = _with_quota_retry(
+                lambda: self.client.chat.completions.create(
+                    model=settings.LLM_GENERAL_MODEL,
+                    messages=chat_history,
+                )
+            )
+            content = (plain.choices[0].message.content or "").strip() or "I was unable to answer that question."
+            return GeneralResponseModel(message=content)
 
     def _add_to_memory(self, role: str, content: str) -> None:
         """Add a message to the agent's memory."""
