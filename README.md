@@ -1,102 +1,46 @@
-<div align="center">
-
-<img src="static/demo-front.gif" alt="SmartGuard — Smart CCTV & Incident Auditing for Public Transit Systems" width="100%"/>
+<img src="static/demo-front.gif" alt="SmartGuard — AI-powered CCTV incident auditing demo" width="100%"/>
 
 # SmartGuard
 
-### Smart CCTV & Incident Auditing for Public Transit Systems
-#### Subways · Trains · Buses
+### Multimodal AI agent for transit CCTV incident auditing
 
-[![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![FastMCP](https://img.shields.io/badge/FastMCP-2.5+-orange)](https://github.com/jlowin/fastmcp)
-[![Pixeltable](https://img.shields.io/badge/Pixeltable-0.4+-purple)](https://github.com/pixeltable/pixeltable)
-[![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)](https://react.dev/)
-[![Opik](https://img.shields.io/badge/Opik-Tracing+-teal)](https://www.comet.com/site/products/opik/)
-
-**An AI-powered, multimodal MCP agent that ingests CCTV footage, captions frames with a Vision-Language Model, builds searchable embedding indexes, and lets transit security operators investigate incidents through natural-language chat with a tool-use agent.**
+A production-grade agent system that ingests surveillance footage, captions every frame with a Vision-Language Model, indexes the result for semantic search, and lets operators investigate incidents through natural-language chat. Built end-to-end on **MCP, FastAPI, Pixeltable, Groq, OpenRouter, and Opik**.
 
 </div>
 
 ---
 
-## Table of Contents
+## Why this matters
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Live Demo](#live-demo)
-- [Architecture](#architecture)
-- [How It Works](#how-it-works)
-- [Tech Stack](#tech-stack)
-- [Incident Types Detected](#incident-types-detected)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Project Structure](#project-structure)
-- [API Reference](#api-reference)
-- [MCP Tools](#mcp-tools)
-- [Observability with Opik](#observability-with-opik)
-- [Security](#security)
-- [Roadmap](#roadmap)
-- [License](#license)
+Public transit systems produce thousands of hours of CCTV daily. When an incident happens — a fall, a fight, an unattended bag — operators have to scrub footage by hand. Slow, error-prone, and it doesn't scale.
+
+SmartGuard turns a multi-hour manual review into a **seconds-long natural-language query**:
+
+> *"Show me the moment a car back door is opened."*
+> → Agent searches the indexed captions, locates the frame, trims the matching clip with ffmpeg, returns a playable video.
 
 ---
 
-## Overview
+## What it does
 
-SmartGuard is a production-grade, multimodal AI agent system designed for public transit security operations. It combines **video ingestion**, **multimodal AI processing** (VLM + LLM), **semantic search** across captions, and a **tool-use agent** that operators can chat with to investigate incidents — all orchestrated through the **Model Context Protocol (MCP)**.
-
-### The Problem
-
-Transit systems generate thousands of hours of CCTV footage daily. When an incident occurs — a fall on the platform, an unattended bag, a fight on a train — operators must manually scrub through video to find the relevant moment, document it, and respond. This is slow, error-prone, and scales poorly.
-
-### The Solution
-
-SmartGuard automates the entire pipeline:
-
-1. **Ingest** — Upload CCTV footage; the system extracts frames and processes everything through real AI models.
-2. **Index** — Every frame is captioned by a VLM and indexed for semantic similarity search.
-3. **Investigate** — Operators chat with an AI agent that can search the index, retrieve relevant clips, and answer questions about what's in the footage.
-4. **Audit** — Every agent interaction is traced end-to-end with Opik, providing full observability for compliance and review.
+| Capability | Result |
+|---|---|
+| **Frame-level captioning** | Every frame is described by a VLM (NVIDIA Nemotron 3 Nano Omni) using a transit-safety prompt that flags fights, falls, unattended bags, crowd crush, vandalism, fare evasion, and slip-and-fall hazards. |
+| **Semantic search over footage** | Sentence-Transformers + CLIP embeddings over captions and frames. Find a moment by describing it in plain English. |
+| **Tool-use agent** | A Groq-powered LLM agent with routing → tool-use → general-response flow. Decides when to call a tool, calls it, synthesizes the answer. |
+| **Clip extraction** | ffmpeg-based trimming at the matched start/end timestamps. Returns a playable video clip. |
+| **Reference-image search** | Paste a screenshot of a person of interest — find every similar frame in the indexed video. |
+| **End-to-end observability** | Every LLM call, tool invocation, and memory operation is traced in Opik with prompt versioning for full audit trails. |
 
 ---
 
-## Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **Multimodal Video Ingestion** | Automatic frame extraction (ffmpeg + PyAV), audio handling, and re-encoding for pipeline compatibility. |
-| **Real VLM Frame Captioning** | Every frame captioned by NVIDIA Nemotron Nano Omni (via OpenRouter) with transit-safety-focused prompts that flag incidents. |
-| **Semantic Search** | Search footage by natural-language query (caption similarity) or by reference image (CLIP). |
-| **MCP Tool Server** | FastMCP server exposing `process_video`, `get_video_clip_from_user_query`, `get_video_clip_from_image`, and `ask_question_about_video` as MCP tools. |
-| **Tool-Use Agent** | An LLM-powered agent (Groq `qwen/qwen3.8-27b`) with routing → tool-use → general-response flow, conversation memory, and structured outputs via Instructor. |
-| **Quota-Aware Retries** | Automatic 429/retry-with-backoff for free-tier LLM rate limits. |
-| **Prompt Versioning** | System prompts stored and versioned in Opik, not hardcoded in the agent. |
-| **End-to-End Tracing** | Every LLM call, tool invocation, and memory operation is tracked in Opik for full observability. |
-| **Clip Extraction** | ffmpeg-based precision clip trimming with start/end timestamps from similarity search results. |
-| **Real-Time UI** | React + Vite dashboard with primary feed, conversation panel, video library, and task status polling. |
-| **Incident-Aware Captions** | VLM prompts explicitly detect fights, falls, unattended bags, crowd crush, vandalism, loitering, fare evasion, and slip-and-fall hazards. |
-
----
-
-## Live Demo
-
-The 20-second animated preview above shows the real working application. The full 4K master recording (45s, 165MB) is at [static/Cap 2026-09-01 at 10.09.02.mp4](static/Cap 2026-09-01 at 10.09.02.mp4).
-
-<video src="static/Cap 2026-09-01 at 10.09.02.mp4" controls width="100%"></video>
-
----
-
-## Architecture
-
-SmartGuard consists of three independently deployable services that communicate over HTTP, plus two external AI providers (LLM and VLM) and a cloud observability layer (Opik).
-
-### System Architecture Diagram
+## Architecture (one screen)
 
 ```mermaid
 flowchart TB
     Operator([Operator])
     subgraph UI["UI · smartguard-ui :3000"]
-        UI_React["React + Vite + Tailwind<br/>Conversation panel · Primary feed<br/>Video library · Upload"]
+        UI_React["React + Vite + Tailwind<br/>Primary feed · Conversation<br/>Video library · Upload"]
     end
     subgraph API["Agent API · smartguard-api :8080"]
         API_FastAPI["FastAPI"]
@@ -104,52 +48,31 @@ flowchart TB
         API_ToolUse["Tool-Use LLM<br/>(Groq Qwen 3.8)"]
         API_Memory["Conversation Memory<br/>(Pixeltable)"]
         API_Retry["Quota-Aware Retry<br/>429 / backoff"]
-        API_Instructor["Instructor<br/>(JSON mode)"]
     end
     subgraph MCP["MCP Server · smartguard-mcp :9090"]
         MCP_Server["FastMCP Server"]
-        subgraph Ingest["Ingestion Pipeline (per video)"]
-            I1["1. ffmpeg / PyAV<br/>re-encode"]
-            I2["2. FrameIterator<br/>extract frames"]
-            I3["3. PIL<br/>resize to 1024x768"]
-            I4["4. VLM caption<br/>(Nemotron Nano Omni)"]
-            I5["5. CLIP<br/>image embeddings"]
-            I6["6. Sentence-Transformers<br/>text embeddings"]
-            I7["7. Pixeltable<br/>store + index"]
-        end
-        MCP_Tools["Tools:<br/>process_video<br/>get_video_clip_from_user_query<br/>get_video_clip_from_image<br/>ask_question_about_video"]
-        MCP_Resources["Resources:<br/>list_tables"]
-        MCP_Prompts["Prompts (Opik-versioned):<br/>routing_system_prompt<br/>tool_use_system_prompt<br/>general_system_prompt"]
+        Ingest["Ingestion Pipeline (per video)<br/>ffmpeg · FrameIterator · PIL<br/>Nemotron VLM · CLIP · Sentence-Transformers<br/>Pixeltable storage + index"]
+        MCP_Tools["Tools<br/>process_video · get_video_clip_from_user_query<br/>get_video_clip_from_image · ask_question_about_video"]
     end
     subgraph Providers["External AI Providers"]
-        Groq["Groq LLM<br/>qwen/qwen3.8-27b<br/>OpenAI-compatible API"]
-        OpenRouter["OpenRouter VLM<br/>nvidia/nemotron-3-nano-omni<br/>OpenAI-compatible API"]
+        Groq["Groq LLM<br/>qwen/qwen3.8-27b"]
+        OpenRouter["OpenRouter VLM<br/>nvidia/nemotron-3-nano-omni"]
     end
-    subgraph Obs["Observability"]
-        Opik["Opik (Comet ML)<br/>workspace: xvi-melese<br/>projects: smartguard-api, smartguard-mcp<br/>LLM traces · tool traces · memory ops<br/>prompt versioning"]
-    end
+    Opik["Opik (Comet ML)<br/>LLM traces · tool traces<br/>prompt versioning"]
 
-    Operator <-->|"HTTP<br/>chat, upload, status, media"| UI_React
+    Operator <-->|"HTTP"| UI_React
     UI_React <-->|"REST"| API_FastAPI
     API_FastAPI --> API_Router
     API_FastAPI --> API_ToolUse
     API_FastAPI --> API_Memory
     API_FastAPI --> API_Retry
-    API_FastAPI --> API_Instructor
-    API_ToolUse <-->|"MCP tools<br/>(HTTP /mcp)"| MCP_Server
-    API_Router -. "load prompts" .-> MCP_Prompts
-    API_ToolUse -. "load prompts" .-> MCP_Prompts
+    API_ToolUse <-->|"MCP /mcp"| MCP_Server
     MCP_Server --> Ingest
-    Ingest --> I7
     Ingest --> OpenRouter
     API_ToolUse --> Groq
     API_Router --> Groq
-    API_Instructor --> Groq
     API_FastAPI -. "traces" .-> Opik
     MCP_Server -. "traces" .-> Opik
-    MCP_Server --> MCP_Tools
-    MCP_Server --> MCP_Resources
-    MCP_Server --> MCP_Prompts
 
     classDef svc fill:#1f2937,stroke:#10b981,stroke-width:2px,color:#e5e7eb
     classDef provider fill:#7c2d12,stroke:#fb923c,stroke-width:2px,color:#fff7ed
@@ -159,210 +82,72 @@ flowchart TB
     class Obs,Opik obs
 ```
 
-### 1. MCP Server (`smartguard-mcp` — port 9090)
-
-The **Model Context Protocol** server is the data-processing backbone. It exposes:
-
-- **Tools** — `process_video`, `get_video_clip_from_user_query`, `get_video_clip_from_image`, `ask_question_about_video`
-- **Resources** — `list_tables` (available video indexes)
-- **Prompts** — `routing_system_prompt`, `tool_use_system_prompt`, `general_system_prompt` (versioned in Opik)
-
-Internally, it uses **Pixeltable** to create per-video tables with computed columns for frame extraction, resizing, VLM captioning, and embedding indexes (CLIP for images, sentence-transformers for captions). All VLM calls are OpenAI-compatible (`https://openrouter.ai/api/v1`).
-
-### 2. Agent API (`smartguard-api` — port 8080)
-
-A **FastAPI** service that hosts the tool-use agent. On startup, the agent:
-
-1. Connects to the MCP server as a client
-2. Discovers available tools (filters out disabled ones like `process_video`)
-3. Retrieves versioned system prompts from the MCP server (backed by Opik)
-4. Initializes conversation memory (Pixeltable-backed)
-
-For each chat message, the agent:
-1. **Routes** — Determines if the message requires a tool call (structured output via Instructor → `RoutingResponseModel`)
-2. **Tool-Use** — If routing returns `true`, calls the appropriate MCP tool, then synthesizes a response with the tool result
-3. **General** — If routing returns `false`, responds conversationally
-
-All LLM calls go to Groq (`qwen/qwen3.8-27b`) via the OpenAI-compatible client. Quota errors (HTTP 429) are caught and retried with exponential backoff (30s → 60s → 90s). `InstructorRetryException` is also recognized as a quota condition.
-
-### 3. UI (`smartguard-ui` — port 3000)
-
-A **React + Vite + Tailwind CSS** dashboard with:
-- Primary video feed (active uploaded footage) with REC indicator and playback controls
-- Conversation panel (chat bubbles for operator / AI / system events; inline clip playback)
-- Video library sidebar (upload, processing status, selection, deletion)
-- Real-time task status polling (every 4s while a video is indexing)
+Three independently deployable services (UI, Agent API, MCP Server) communicate over HTTP. The MCP Server is the data-processing backbone (frame extraction, VLM captioning, embedding indexes via Pixeltable). The Agent API is the tool-use LLM (routing + tool selection + response synthesis). The UI is the operator console.
 
 ---
 
-## How It Works
+## End-to-end flow
 
 ```
 Operator uploads CCTV footage
-          │
-          ▼
-┌─────────────────────────────────┐
-│  MCP Server — Video Ingestion   │
-│                                 │
-│  1. ffmpeg/PyAV: re-encode      │
-│  2. FrameIterator: extract      │
-│  3. PIL: resize frames          │
-│  4. NVIDIA Nemotron VLM:        │
-│       caption each frame        │
-│  5. CLIP: image embeddings      │
-│  6. SentenceTransformer: text   │
-│     embeddings (captions)       │
-│  7. Pixeltable: store + index   │
-└──────────────┬──────────────────┘
-               │
-               ▼
-Operator asks: "Show me the clip where
-the back of the car door is opened"
-               │
-               ▼
-┌─────────────────────────────────┐
-│  Agent API — Tool-Use Flow      │
-│                                 │
-│  1. Router (LLM): tool needed?  │
-│     → Yes (Groq Qwen 3.8)       │
-│  2. Tool-Use (LLM): which tool? │
-│     → get_video_clip_from_query │
-│  3. MCP call: search captions   │
-│     by similarity               │
-│  4. ffmpeg: trim clip at match  │
-│  5. LLM: synthesize response    │
-│  6. Return: message + clip path │
-└──────────────┬──────────────────┘
-               │
-               ▼
-Operator sees response + plays clip
-          │
-          ▼
-  Opik traces entire flow
-  (routing, tool calls, LLM calls,
-   memory, attachments)
+        ↓
+MCP Server ingests it:
+  1. ffmpeg / PyAV re-encode for compatibility
+  2. FrameIterator extracts frames
+  3. PIL resizes to 1024x768
+  4. NVIDIA Nemotron VLM captions each frame (transit-safety prompt)
+  5. CLIP builds image embeddings
+  6. Sentence-Transformers builds text embeddings on captions
+  7. Pixeltable stores and indexes everything
+        ↓
+Operator asks: "Show me the clip where the back of the car door is opened"
+        ↓
+Agent API:
+  1. Router LLM (Groq) decides: yes, this needs a tool
+  2. Tool-Use LLM (Groq) selects get_video_clip_from_user_query
+  3. MCP call searches captions by similarity
+  4. ffmpeg trims the matching segment
+  5. LLM synthesizes the response
+  6. Returns: message + clip path
+        ↓
+Operator sees the response and plays the clip
+        ↓
+Opik has the full trace for audit
 ```
+
+---
+
+## Live Demo
+
+The animated preview above shows the real working application. The full 4K master recording is at [static/Cap 2026-09-01 at 10.09.02.mp4](static/Cap 2026-09-01 at 10.09.02.mp4).
+
+---
+
+## What I built (highlights for a hiring manager)
+
+- **Shipped a working end-to-end multimodal agent system** — three services, real LLM and VLM calls, real ffmpeg clip extraction, real semantic search. Not a mockup.
+- **Production-quality error handling** — quota-aware retry with exponential backoff (catches both `openai.RateLimitError` and `InstructorRetryException`), tool call history appending for Gemini/OpenAI-compat quirks, robust empty-result handling in search tools.
+- **Provider-agnostic by design** — switched the LLM from Gemini to Groq and the VLM from Gemini to OpenRouter without rewriting any agent code, because everything goes through the OpenAI SDK.
+- **Full observability** — every LLM call, tool invocation, memory operation, and prompt version is traced in Opik for compliance auditing.
+- **Real ops considerations** — absolute video paths so the MCP server (different CWD) can find uploaded files, ffmpeg binary resolved with fallbacks for background processes without PATH, LFS for large media, file-name sanitization for Windows.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **MCP Server** | FastMCP 2.5+ | MCP protocol server (tools, resources, prompts) |
-| **Video Processing** | Pixeltable 0.4+ | Multimodal data tables, computed columns, embedding indexes |
+| Layer | Technology | Why |
+|---|---|---|
+| **MCP Server** | FastMCP 2.5+ | Standard protocol for tool/prompt/resource exposure |
+| **Video processing** | Pixeltable 0.4+ | Multimodal data tables, computed columns, embedding indexes |
 | **Video I/O** | ffmpeg 7.x + PyAV 18.x | Frame extraction, audio handling, clip trimming, re-encoding |
-| **VLM** | NVIDIA Nemotron 3 Nano Omni (via OpenRouter) | Frame captioning with incident detection |
-| **LLM** | Groq `qwen/qwen3.8-27b` (OpenAI-compat) | Agent routing, tool-use, general chat |
-| **Image Embeddings** | CLIP (openai/clip-vit-base-patch32) | Image-to-image similarity search |
-| **Text Embeddings** | Sentence-Transformers (all-MiniLM-L6-v2) | Caption semantic search |
-| **Agent Framework** | Instructor + OpenAI SDK | Structured outputs, tool-calling |
-| **Agent API** | FastAPI + Uvicorn | REST API server |
-| **Observability** | Opik (Comet ML) | Prompt versioning, LLM tracing, audit trail |
-| **UI** | React 18 + Vite 5 + Tailwind CSS 3 | Dashboard, conversation, video library |
-| **UI Components** | shadcn/ui + Radix UI + Lucide | Accessible, composable component system |
-| **Language** | Python 3.12+ / TypeScript 5+ | Type-safe end-to-end |
-
----
-
-## Incident Types Detected
-
-SmartGuard's VLM captioning prompts are tuned to detect and flag the following incident categories common in public transit environments:
-
-| Incident Type | Description |
-|--------------|-------------|
-| **Fights / Physical Altercations** | Two or more individuals engaged in physical conflict. |
-| **Falls / Medical Emergencies** | A person falling, collapsing, or appearing to need medical assistance. |
-| **Unattended / Abandoned Bags** | Luggage or bags left without an owner nearby — bomb threat indicator. |
-| **Crowd Crush / Overcrowding** | Dangerous density of passengers on platforms or in carriages. |
-| **Vandalism / Property Damage** | Defacing or destroying transit property (seats, windows, signage). |
-| **Loitering / Trespassing** | Individuals in restricted or non-public areas. |
-| **Fare Evasion / Gate Jumping** | Bypassing turnstiles, gates, or fare collection. |
-| **Slip-and-Fall Hazards** | Wet surfaces, obstacles, or conditions likely to cause falls. |
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **Python 3.12+** and [`uv`](https://docs.astral.sh/uv/) package manager
-- **Node.js 18+** and [Bun](https://bun.sh/) runtime
-- **ffmpeg 7.x** (system-installed, with development headers for PyAV)
-- API keys for:
-  - **Groq** (LLM) — [Get a key](https://console.groq.com/keys)
-  - **OpenRouter** (VLM) — [Get a key](https://openrouter.ai/keys)
-  - **Opik / Comet ML** (tracing + prompt versioning) — [Get a key](https://www.comet.com/signup)
-
-### 1. Clone
-
-```bash
-git clone https://github.com/truecallerabreham/Smart_cctv.git
-cd Smart_cctv
-```
-
-### 2. Configure Environment
-
-```bash
-# MCP server (VLM via OpenRouter)
-cp smartguard-mcp/.env.example smartguard-mcp/.env
-# Edit smartguard-mcp/.env: set OPENAI_API_KEY (OpenRouter) and OPIK_API_KEY
-
-# Agent API (LLM via Groq)
-cp smartguard-api/.env.example smartguard-api/.env
-# Edit smartguard-api/.env: set LLM_API_KEY (Groq) and OPIK_API_KEY
-```
-
-### 3. Install Dependencies
-
-```bash
-# MCP server
-cd smartguard-mcp && uv sync && cd ..
-
-# Agent API
-cd smartguard-api && uv sync && cd ..
-
-# UI
-cd smartguard-ui && bun install && cd ..
-```
-
-### 4. Run
-
-Start all three services (each in its own terminal):
-
-```bash
-# Terminal 1 — MCP Server (port 9090)
-cd smartguard-mcp
-.venv/bin/python -m smartguard_mcp.server --port 9090 --host 0.0.0.0
-
-# Terminal 2 — Agent API (port 8080)
-cd smartguard-api
-.venv/bin/python -m smartguard_api.api --port 8080 --host 0.0.0.0
-
-# Terminal 3 — UI (port 3000)
-cd smartguard-ui
-bun run dev
-```
-
-Or use the Makefile:
-
-```bash
-make start-mcp  # Terminal 1
-make start-api  # Terminal 2
-make start-ui   # Terminal 3
-```
-
-### 5. Use
-
-Open `http://localhost:3000` in your browser:
-
-1. Upload a CCTV video file (mp4, mov, avi) using the **Upload Video** button in the sidebar
-2. Wait for processing to complete (status changes from *Indexing* → *Ready*)
-3. Type a question in the chat input, e.g.:
-   - *"Show me the clip where someone is near the platform edge"*
-   - *"Was there any unattended bag?"*
-   - *"Find the moment someone jumps the gate"*
-4. The agent will retrieve the relevant clip or answer from frame captions
+| **VLM** | NVIDIA Nemotron 3 Nano Omni (OpenRouter) | Vision-language captioning with incident detection |
+| **LLM** | Groq `qwen/qwen3.8-27b` (OpenAI-compat) | Agent routing, tool selection, general chat |
+| **Embeddings** | CLIP + Sentence-Transformers | Image and text similarity search |
+| **Agent framework** | Instructor + OpenAI SDK | Structured outputs (JSON mode), tool calling |
+| **Agent API** | FastAPI + Uvicorn | Async REST with background task processing |
+| **Observability** | Opik (Comet ML) | LLM/tool traces + prompt versioning |
+| **UI** | React 18 + Vite 5 + Tailwind 3 | Operator console, conversation panel, video library |
+| **Language** | Python 3.12+ / TypeScript 5+ | End-to-end type safety |
 
 ---
 
@@ -460,7 +245,7 @@ Smart_cctv/
 │   └── Dockerfile
 │
 ├── shared_media/                    # Runtime: uploaded videos + extracted clips (gitignored)
-├── static/                          # README assets (hero, demo video, screenshots, opik dashboard, api docs)
+├── static/                          # README assets (hero demo, screenshots, opik dashboard, api docs)
 ├── docker-compose.yml               # Docker Compose for containerized deployment
 ├── Makefile                         # Local development commands
 ├── .env.example                     # Root-level example
