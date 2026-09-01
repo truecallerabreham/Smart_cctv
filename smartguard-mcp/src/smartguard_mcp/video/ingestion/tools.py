@@ -1,13 +1,39 @@
 import base64
+import os
+import shutil
 import subprocess
 from io import BytesIO
 from pathlib import Path
+from uuid import uuid4
 
 import av
 import loguru
 from PIL import Image
 
 logger = loguru.logger.bind(name="VideoTools")
+
+
+def _resolve_ffmpeg() -> str:
+    """Locate the ffmpeg binary.
+
+    Tries PATH first, then a couple of known Windows install locations. The MCP
+    server runs as a background process that may not inherit a freshly-added
+    user PATH, so this fallback matters.
+    """
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    for candidate in (
+        r"C:\Users\HP\Documents\ffmpeg.exe",
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+        r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+    ):
+        if Path(candidate).exists():
+            return candidate
+    return "ffmpeg"
+
+
+FFMPEG_BIN = _resolve_ffmpeg()
 
 
 def extract_video_clip(video_path: str, start_time: float, end_time: float, output_path: str = None) -> str:
@@ -18,6 +44,15 @@ def extract_video_clip(video_path: str, start_time: float, end_time: float, outp
     if start_time >= end_time:
         raise ValueError("start_time must be less than end_time")
 
+    # Convert relative output path to absolute path in the API's shared_media directory
+    # so the frontend can serve it via the /media endpoint
+    if output_path is None or output_path.startswith("./"):
+        from pathlib import Path
+        api_shared_media = Path(r"C:\Users\HP\Documents\smartcctv\smartguard-api\shared_media")
+        api_shared_media.mkdir(parents=True, exist_ok=True)
+        filename = Path(output_path).name if output_path else f"{uuid4()}.mp4"
+        output_path = str(api_shared_media / filename)
+
     ## Anatomy of FFMPEG command
     # -i = input file
     # -ss/-to = start and end time of the clip, formatted as seconds or hh:mm:ss
@@ -25,7 +60,7 @@ def extract_video_clip(video_path: str, start_time: float, end_time: float, outp
     # -preset = encoding speed/quality split
     # last argument is the output video path (if using libx264, it must end with .mp4)
     command = [
-        "ffmpeg",
+        FFMPEG_BIN,
         "-ss",
         str(start_time),
         "-to",
@@ -45,11 +80,23 @@ def extract_video_clip(video_path: str, start_time: float, end_time: float, outp
     ]
 
     try:
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, _ = process.communicate()
-        logger.debug(f"FFmpeg output: {stdout.decode('utf-8', errors='ignore')}")
+        process = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        logger.debug(f"FFmpeg stdout: {process.stdout[:500] if process.stdout else ''}")
+        logger.debug(f"FFmpeg stderr: {process.stderr[:500] if process.stderr else ''}")
+
+        if process.returncode != 0:
+            raise IOError(f"FFmpeg failed with code {process.returncode}: {process.stderr[:200] if process.stderr else 'unknown error'}")
+
+        # Verify the output file was actually created
+        from pathlib import Path as PathLib
+        if not PathLib(output_path).exists():
+            raise IOError(f"FFmpeg completed but output file not found at {output_path}")
+
         return output_path
-    except subprocess.CalledProcessError as e:
+    except subprocess.TimeoutExpired:
+        raise IOError("FFmpeg extraction timed out after 120 seconds")
+    except Exception as e:
+        logger.error(f"Video clip extraction failed: {e}")
         raise IOError(f"Failed to extract video clip: {str(e)}")
 
 
@@ -126,30 +173,30 @@ def re_encode_video(video_path: str) -> str:
             return str(video_path)
     except Exception as e:
         logger.error(f"An unexpected error occurred while trying to open video {video_path}: {e}")
-    finally:
-        o_dir, o_fname = Path(video_path).parent, Path(video_path).name
-        reencoded_filename = f"re_{o_fname}"
-        reencoded_video_path = Path(o_dir) / reencoded_filename
 
-        command = ["ffmpeg", "-i", video_path, "-c", "copy", str(reencoded_video_path)]
+    o_dir, o_fname = Path(video_path).parent, Path(video_path).name
+    reencoded_filename = f"re_{o_fname}"
+    reencoded_video_path = Path(o_dir) / reencoded_filename
 
-        logger.info(f"Attempting to re-encode video using FFmpeg: {' '.join(command)}")
+    command = [FFMPEG_BIN, "-i", video_path, "-c", "copy", str(reencoded_video_path)]
+
+    logger.info(f"Attempting to re-encode video using FFmpeg: {' '.join(command)}")
+
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        logger.info(f"FFmpeg re-encoding successful for {video_path} to {reencoded_video_path}")
+        logger.debug(f"FFmpeg stdout: {result.stdout}")
+        logger.debug(f"FFmpeg stderr: {result.stderr}")
 
         try:
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
-            logger.info(f"FFmpeg re-encoding successful for {video_path} to {reencoded_video_path}")
-            logger.debug(f"FFmpeg stdout: {result.stdout}")
-            logger.debug(f"FFmpeg stderr: {result.stderr}")
-
-            try:
-                with av.open(reencoded_video_path) as _:
-                    logger.info(f"Re-encoded video {reencoded_video_path} successfully opened by PyAV.")
-                    return str(reencoded_video_path)
-            except Exception as e:
-                logger.error(
-                    f"An unexpected error occurred while trying to open re-encoded video {reencoded_video_path}: {e}"
-                )
-                return None
+            with av.open(reencoded_video_path) as _:
+                logger.info(f"Re-encoded video {reencoded_video_path} successfully opened by PyAV.")
+                return str(reencoded_video_path)
         except Exception as e:
-            logger.error(f"An unexpected error occurred during FFmpeg re-encoding: {e}")
+            logger.error(
+                f"An unexpected error occurred while trying to open re-encoded video {reencoded_video_path}: {e}"
+            )
             return None
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during FFmpeg re-encoding: {e}")
+        return None

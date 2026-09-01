@@ -11,12 +11,11 @@ class Settings(BaseSettings):
     OPIK_WORKSPACE: str = "default"
     OPIK_PROJECT: str = "smartguard-mcp"
 
-    # --- OpenAI-compatible Configuration (defaults to Google Gemini) ---
+    # --- OpenAI-compatible Configuration (OpenRouter for the VLM) ---
     OPENAI_API_KEY: str
-    OPENAI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
-    # Gemini has no Whisper-compat endpoint; transcription uses the native Gemini audio API.
-    AUDIO_TRANSCRIPT_MODEL: str = "gemini-2.0-flash"
-    IMAGE_CAPTION_MODEL: str = "gemini-2.0-flash"
+    OPENAI_BASE_URL: str = "https://openrouter.ai/api/v1"
+    AUDIO_TRANSCRIPT_MODEL: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    IMAGE_CAPTION_MODEL: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
 
     # --- Video Ingestion Configuration ---
     SPLIT_FRAMES_COUNT: int = 2
