@@ -40,3 +40,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local demo recordings (use static/demo.gif in README instead)
+static/Cap *.mp4

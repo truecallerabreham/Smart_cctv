@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="static/hero.png" alt="SmartGuard — Smart CCTV & Incident Auditing for Public Transit Systems" width="100%"/>
+<img src="static/demo.gif" alt="SmartGuard — Smart CCTV & Incident Auditing for Public Transit Systems" width="100%"/>
 
 # SmartGuard
 
@@ -80,9 +80,9 @@ SmartGuard automates the entire pipeline:
 
 ## Live Demo
 
-The demo video below shows the real working application — an operator uploads CCTV footage, asks questions, and the AI agent retrieves actual video clips:
+The 8-second clip below shows the real working application — an operator uploads CCTV footage, asks questions, and the AI agent retrieves actual video clips. (Full 45-second recording at `static/Cap 2026-09-01 at 10.09.02.mp4`.)
 
-<video src="static/demo.mp4" controls width="100%"></video>
+![SmartGuard live demo](static/demo.gif)
 
 ---
 
