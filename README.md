@@ -84,24 +84,6 @@ The demo video below shows the real working application — an operator uploads 
 
 <video src="static/demo.mp4" controls width="100%"></video>
 
-### Incident 1 — General Chat
-
-<img src="static/screenshots/incident1-general-chat.png" alt="Incident 1 — General Chat" width="100%"/>
-
-*The operator asks "What can you help me with?" and the SmartGuard AI agent responds with a detailed description of its CCTV incident auditing capabilities, listing the incident types it can detect.*
-
-### Incident 2 — Video Upload & Processing
-
-<img src="static/screenshots/incident2-video-upload.png" alt="Incident 2 — Video Upload" width="100%"/>
-
-*The operator uploads a CCTV video file. The system processes it through the full pipeline: ffmpeg frame extraction → VLM captioning → CLIP image embeddings → sentence-transformer text embeddings. The video appears in the library sidebar with "Ready" status.*
-
-### Incident 3 — Agent Returns a Video Clip
-
-<img src="static/screenshots/incident3-clip-retrieval.png" alt="Incident 3 — Clip Retrieval" width="100%"/>
-
-*The operator asks "Show me the clip where the bunny is on screen." The agent routes to the tool-use path, calls `get_video_clip_from_user_query`, searches the caption index by semantic similarity, trims the matching segment with ffmpeg, and returns the clip — playable inline in the chat.*
-
 ---
 
 ## Architecture
@@ -548,12 +530,6 @@ SmartGuard uses [Opik](https://www.comet.com/site/products/opik/) (by Comet ML) 
 *Comet Opik "Project overview" dashboard for the `smartguard-api` project — workspace `xvi-melese`. At-a-glance metrics: Total trace count, Total error count, p50 / p99 latency, Cost estimate. Volume + trace-duration charts below.*
 
 View your own dashboard at: `https://www.comet.com/opik/` → your workspace → `smartguard-api` / `smartguard-mcp`.
-
-### Single Agent Trace
-
-<img src="static/screenshots/opik-trace.png" alt="Opik Trace — SmartGuard Agent" width="100%"/>
-
-*A single agent trace showing the routing decision, tool invocation, LLM calls, and memory operations for one chat turn. Workspace: `xvi-melese`, project: `smartguard-api`.*
 
 ### Prompt Versioning
 
